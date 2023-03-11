@@ -55,13 +55,14 @@
   (lgr--def-level debug)
   (lgr--def-level trace))
 
+;; (lgr--json-serialize :: (function (mixed) string))
 (defmacro lgr--json-serialize (data)
   "Serialize DATA using either `json-serialize' or `json-encode'."
   (if (fboundp 'json-serialize)
       `(json-serialize ,data)
     `(json-encode ,data)))
 
-;; (lgr-level-to-name :: (function (int) string))
+;; (lgr-level-to-name :: (function (int) symbol))
 (defun lgr-level-to-name (level)
   "Convert logging LEVEL to symbol."
   (cdr (assq
@@ -207,7 +208,7 @@ THIS is the layout."
 
 The implementations should always return THIS.")
 
-;; (lgr-set-threshold :: (function (mixed) int))
+;; (lgr-get-threshold :: (function (mixed) int))
 (cl-defgeneric lgr-get-threshold (this)
   "Get threshold for THIS.")
 
@@ -239,7 +240,7 @@ above will be emailed to a SRE personnel.
 To change the way events are formatted, change the layout for
 this appender with `lgr-set-layout'.  See `lgr-layout'.")
 
-;; (lgr-append :: (function ((class lgr-appender) (class lgr-layout)) (class lgr-appender)))
+;; (lgr-set-layout :: (function ((class lgr-appender) (class lgr-layout)) (class lgr-appender)))
 (cl-defgeneric lgr-set-layout (this layout)
   "Set the LAYOUT for THIS appender.")
 
@@ -359,7 +360,7 @@ The root logger which is always present has default level info."
                 (seq-drop (oref this appenders) pos)))
   this)
 
-;; (lgr-remove-appender :: (function ((class lgr-logger)) (class lgr-logger)))
+;; (lgr-reset-appenders :: (function ((class lgr-logger)) (class lgr-logger)))
 (cl-defgeneric lgr-reset-appenders (this)
   "Remove all appenders from THIS logger."
   (oset this appenders nil)

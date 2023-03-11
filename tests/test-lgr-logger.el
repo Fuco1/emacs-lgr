@@ -1,11 +1,7 @@
 (require 'buttercup)
 (require 'lgr)
 
-(defclass lgr-test-appender (lgr-appender)
-  ((events :initform nil)))
-
-(cl-defmethod lgr-append ((appender lgr-test-appender) event)
-  (push event (oref appender events)))
+(load "tests/helpers.el")
 
 (describe "Lgr logger"
 

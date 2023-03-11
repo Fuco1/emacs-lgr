@@ -78,6 +78,11 @@
     :type (list-of integer)
     :initarg :timestamp
     :documentation "Timestamp created by `current-time'.")
+   (timezone
+    :type (or string boolean symbol)
+    :initarg :timezone
+    :initform t
+    :documentation "Timezone of the event.")
    (logger-name
     :type string
     :initarg :logger-name
@@ -98,7 +103,7 @@ additional properties.")
 
 (cl-defmethod lgr-to-string ((this lgr-event))
   (format "[%s] (%s) %s - %s%s"
-          (format-time-string "%FT%T%z" (oref this timestamp))
+          (format-time-string "%FT%T%z" (oref this timestamp) (oref this timezone))
           (oref this level)
           (oref this logger-name)
           (oref this msg)
@@ -149,7 +154,10 @@ A layout needs to implement the method `lgr-format-event'.")
   (format-spec
    (oref this format)
    (format-spec-make
-    ?t (format-time-string (oref this timestamp-format) (oref event timestamp))
+    ?t (format-time-string
+        (oref this timestamp-format)
+        (oref event timestamp)
+        (oref event timezone))
     ?l (downcase (symbol-name (lgr-level-to-name (oref event level))))
     ?L (upcase (symbol-name (lgr-level-to-name (oref event level))))
     ?k (substring (downcase (symbol-name (lgr-level-to-name (oref event level)))) 0 1)
@@ -169,7 +177,9 @@ A layout needs to implement the method `lgr-format-event'.")
 (cl-defmethod lgr-format-event ((_this lgr-layout-json) (event lgr-event))
   (json-serialize
    (list
-    :timestamp (format-time-string "%FT%T%z" (oref event timestamp))
+    :timestamp (format-time-string "%FT%T%z"
+                                   (oref event timestamp)
+                                   (oref event timezone))
     :level (oref event level)
     :logger-name (oref event logger-name)
     :msg (oref event msg)

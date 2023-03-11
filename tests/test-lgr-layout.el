@@ -12,7 +12,7 @@
                               :logger-name "main"
                               :meta (list :key "value"))))
         (expect (lgr-format-event (lgr-layout) event)
-                :to-equal "[2023-03-11T02:24:49+0100] (400) main - hello (:key value)"))))
+                :to-equal "[2023-03-11T01:24:49+0000] (400) main - hello (:key value)"))))
 
   (describe "lgr-layout-json"
 
@@ -23,7 +23,7 @@
                               :logger-name "main"
                               :meta (list :key "value"))))
         (expect (lgr-format-event (lgr-layout-json) event)
-                :to-equal "{\"timestamp\":\"2023-03-11T02:24:49+0100\",\"level\":400,\"logger-name\":\"main\",\"msg\":\"hello\",\"meta\":{\"key\":\"value\"}}"))))
+                :to-equal "{\"timestamp\":\"2023-03-11T01:24:49+0000\",\"level\":400,\"logger-name\":\"main\",\"msg\":\"hello\",\"meta\":{\"key\":\"value\"}}"))))
 
 
   (describe "lgr-layout-format"
@@ -35,7 +35,7 @@
                               :logger-name "main"
                               :meta (list :key "value"))))
         (expect (lgr-format-event (lgr-layout-format :format "%t %n %g - %m %f") event)
-                :to-equal "2023-03-11T02:24:49+0100 400 main - hello (:key value)")))
+                :to-equal "2023-03-11T01:24:49+0000 400 main - hello (:key value)")))
 
     (it "should have customizable timestamp-format"
       (let ((event (lgr-event :msg "hello"
@@ -57,7 +57,7 @@
                                 :logger-name "main"
                                 :meta (list :key "value"))))
           (expect (lgr-format-event (lgr-layout-format :format "%t") event)
-                  :to-equal "2023-03-11T02:24:49+0100")))
+                  :to-equal "2023-03-11T01:24:49+0000")))
 
       (it "should format %l as lowercase level name"
         (let ((event (lgr-event :msg "hello"

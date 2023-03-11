@@ -52,6 +52,11 @@
   (lgr--def-level debug)
   (lgr--def-level trace))
 
+(defmacro lgr--json-serialize (data)
+  (if (fboundp 'json-serialize)
+      `(json-serialize ,data)
+    `(json-encode ,data)))
+
 ;; (lgr-level-to-name :: (function (int) string))
 (defun lgr-level-to-name (level)
   (cdr (assq
@@ -166,7 +171,7 @@ A layout needs to implement the method `lgr-format-event'.")
     ?g (oref event logger-name)
     ?m (oref event msg)
     ?f (oref event meta)
-    ?j (json-serialize (oref event meta)))))
+    ?j (lgr--json-serialize (oref event meta)))))
 
 (defclass lgr-layout-json (lgr-layout) ()
   "Format the event as JSON.")
@@ -175,7 +180,7 @@ A layout needs to implement the method `lgr-format-event'.")
   "json layout")
 
 (cl-defmethod lgr-format-event ((_this lgr-layout-json) (event lgr-event))
-  (json-serialize
+  (lgr--json-serialize
    (list
     :timestamp (format-time-string "%FT%T%z"
                                    (oref event timestamp)

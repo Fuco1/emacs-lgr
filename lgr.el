@@ -1,4 +1,4 @@
-;;; lgr.el --- A fully featured logging framework for Emacs -*- lexical-binding: t -*-
+;;; lgr.el --- A fully featured logging framework -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2023 Matúš Goljer
 
@@ -7,7 +7,8 @@
 ;; Version: 0.1.0
 ;; Package-Requires: ((emacs "26.1"))
 ;; Created: 10th March 2023
-;; Keywords: logging
+;; Keywords: tools
+;; URL: https://github.com/Fuco1/emacs-lgr
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License
@@ -24,6 +25,10 @@
 
 ;;; Commentary:
 
+;; lgr is a logging package for Emacs built on the back of EIEIO
+;; classes.  It is designed to be flexible, performant, and
+;; extensible.
+
 ;;; Code:
 
 (require 'seq)
@@ -31,14 +36,12 @@
 (require 'format-spec)
 
 (eval-and-compile
-  (defconst lgr-log-levels '(
-                             (fatal . 100)
+  (defconst lgr-log-levels '((fatal . 100)
                              (error . 200)
                              (warn . 300)
                              (info . 400)
                              (debug . 500)
-                             (trace . 600)
-                             )
+                             (trace . 600))
     "Log levels used in `lgr-log'.")
 
   (defmacro lgr--def-level (level)
@@ -53,12 +56,14 @@
   (lgr--def-level trace))
 
 (defmacro lgr--json-serialize (data)
+  "Serialize DATA using either `json-serialize' or `json-encode'."
   (if (fboundp 'json-serialize)
       `(json-serialize ,data)
     `(json-encode ,data)))
 
 ;; (lgr-level-to-name :: (function (int) string))
 (defun lgr-level-to-name (level)
+  "Convert logging LEVEL to symbol."
   (cdr (assq
         level
         (mapcar
@@ -107,6 +112,7 @@ The event can be extended along with a logger if we want to track
 additional properties.")
 
 (cl-defmethod lgr-to-string ((this lgr-event))
+  "Format THIS event as string."
   (format "[%s] (%s) %s - %s%s"
           (format-time-string "%FT%T%z" (oref this timestamp) (oref this timezone))
           (oref this level)
@@ -123,10 +129,10 @@ A layout needs to implement the method `lgr-format-event'.")
 
 ;; (lgr-format-event :: (function ((class lgr-layout) (class lgr-event)) string))
 (cl-defgeneric lgr-format-event (this event)
-  "Format `lgr-event' EVENT to string.")
+  "Format `lgr-event' EVENT to string using THIS layout.")
 
 (cl-defmethod lgr-format-event ((_this lgr-layout) (event lgr-event))
-  "Default implementation calls `lgr-to-string' on the passed EVENT."
+  "Use `lgr-to-string' to format EVENT."
   (lgr-to-string event))
 
 (defclass lgr-layout-format (lgr-layout)
@@ -156,6 +162,9 @@ A layout needs to implement the method `lgr-format-event'.")
 %j All custom fields of x in proper JSON.")
 
 (cl-defmethod lgr-format-event ((this lgr-layout-format) (event lgr-event))
+  "Format EVENT using format spec from `lgr-layout-format'.
+
+THIS is the layout."
   (format-spec
    (oref this format)
    (format-spec-make
@@ -177,9 +186,11 @@ A layout needs to implement the method `lgr-format-event'.")
   "Format the event as JSON.")
 
 (cl-defmethod lgr-to-string ((_this lgr-layout-json))
+  "Format THIS layout to string."
   "json layout")
 
 (cl-defmethod lgr-format-event ((_this lgr-layout-json) (event lgr-event))
+  "Format EVENT as JSON."
   (lgr--json-serialize
    (list
     :timestamp (format-time-string "%FT%T%z"
@@ -237,18 +248,23 @@ this appender with `lgr-set-layout'.  See `lgr-layout'.")
   "Append EVENT to THIS appender's output.")
 
 (cl-defmethod lgr-to-string ((_this lgr-appender))
+  "Format THIS appender as string."
   "message appender")
 
 (cl-defmethod lgr-set-threshold ((this lgr-appender) level)
+  "Set threshold for THIS appender to LEVEL."
   (oset this threshold level)
   this)
 
 (cl-defmethod lgr-set-layout ((this lgr-appender) (layout lgr-layout))
+  "Set layout for THIS appender to LAYOUT."
   (oset this layout layout)
   this)
 
 (cl-defmethod lgr-append ((this lgr-appender) (event lgr-event))
-  "Print the EVENT to minibuffer using `message'."
+  "Print the EVENT to minibuffer using `message'.
+
+THIS is an appender."
   (message "%s" (lgr-format-event (oref this layout) event))
   this)
 
@@ -256,7 +272,9 @@ this appender with `lgr-set-layout'.  See `lgr-layout'.")
   "Print events to standard output using `princ'.")
 
 (cl-defmethod lgr-append ((this lgr-appender-princ) event)
-  "Print the EVENT to standard output using `princ'."
+  "Print the EVENT to standard output using `princ'.
+
+THIS is an appender."
   (princ (lgr-format-event (oref this layout) event))
   (princ "\n")
   this)
@@ -269,7 +287,9 @@ this appender with `lgr-set-layout'.  See `lgr-layout'.")
   "Log events to a file.")
 
 (cl-defmethod lgr-append ((this lgr-appender-file) event)
-  "Print the EVENT to a file."
+  "Print the EVENT to a file.
+
+THIS is an appender."
   (let ((msg (lgr-format-event (oref this layout) event)))
     (with-temp-buffer
       (insert msg)
@@ -302,11 +322,12 @@ this appender with `lgr-set-layout'.  See `lgr-layout'.")
   "Logger produces `lgr-event' objects and passes them to appenders.")
 
 (cl-defmethod lgr-set-threshold ((this lgr-logger) level)
+  "Set threshold for THIS logger to LEVEL."
   (oset this threshold level)
   this)
 
 (cl-defmethod lgr-get-threshold ((this lgr-logger))
-  "Get the threshold of this appender or first configured parent.
+  "Get the threshold of THIS logger or first configured parent.
 
 If this logger has no configured threshold, recursively check the
 parents and pick the first one with configured level.
@@ -325,12 +346,14 @@ The root logger which is always present has default level info."
 
 ;; (lgr-add-appender :: (function ((class lgr-logger) (class lgr-appender)) (class lgr-logger)))
 (cl-defgeneric lgr-add-appender (this appender)
+  "Add APPENDER to THIS logger."
   (oset this appenders
         (append (oref this appenders) (list appender)))
   this)
 
 ;; (lgr-remove-appender :: (function ((class lgr-logger) int) (class lgr-logger)))
 (cl-defgeneric lgr-remove-appender (this pos)
+  "Remove appender at POS from THIS logger."
   (oset this appenders
         (append (seq-take (oref this appenders) (1- pos))
                 (seq-drop (oref this appenders) pos)))
@@ -344,6 +367,7 @@ The root logger which is always present has default level info."
 
 ;; (lgr-get-appenders :: (function ((class lgr-logger)) (list (class lgr-appender))))
 (cl-defgeneric lgr-get-appenders (this)
+  "Get all appenders for THIS logger and its parents."
   (append (oref this appenders)
           (when-let ((parent (oref this parent)))
             (when (oref this propagate)
@@ -358,6 +382,11 @@ the logging macros which implement lazy evaluation for the
 arguments.  In case the logger level is less than the granularity
 of the event to be produced, the arguments will not be
 evaluated.
+
+THIS is a logger instance.
+
+META is the additional custom data stored as metadata on the
+event.
 
 The logging macros are:
 
@@ -378,37 +407,37 @@ The logging macros are:
           (lgr-append app event))))))
 
 (defmacro lgr-fatal (this message &rest meta)
-  "Log MESSAGE at fatal level."
+  "Log MESSAGE using THIS logger at fatal level."
   (macroexp-let2 symbolp logger this
     `(when (>= (lgr-get-threshold ,logger) lgr-level-error)
        (apply #'lgr-log ,logger lgr-level-error ,message (list ,@meta)))))
 
 (defmacro lgr-error (this message &rest meta)
-  "Log MESSAGE at error level."
+  "Log MESSAGE using THIS logger at error level."
   (macroexp-let2 symbolp logger this
     `(when (>= (lgr-get-threshold ,this) lgr-level-error)
        (apply #'lgr-log ,this lgr-level-error ,message (list ,@meta)))))
 
 (defmacro lgr-warn (this message &rest meta)
-  "Log MESSAGE at warn level."
+  "Log MESSAGE using THIS logger at warn level."
   (macroexp-let2 symbolp logger this
     `(when (>= (lgr-get-threshold ,this) lgr-level-warn)
        (apply #'lgr-log ,this lgr-level-warn ,message (list ,@meta)))))
 
 (defmacro lgr-info (this message &rest meta)
-  "Log MESSAGE at info level."
+  "Log MESSAGE using THIS logger at info level."
   (macroexp-let2 symbolp logger this
     `(when (>= (lgr-get-threshold ,this) lgr-level-info)
        (apply #'lgr-log ,this lgr-level-info ,message (list ,@meta)))))
 
 (defmacro lgr-debug (this message &rest meta)
-  "Log MESSAGE at debug level."
+  "Log MESSAGE using THIS logger at debug level."
   (macroexp-let2 symbolp logger this
     `(when (>= (lgr-get-threshold ,this) lgr-level-debug)
        (apply #'lgr-log ,this lgr-level-debug ,message (list ,@meta)))))
 
 (defmacro lgr-trace (this message &rest meta)
-  "Log MESSAGE at trace level."
+  "Log MESSAGE using THIS logger at trace level."
   (macroexp-let2 symbolp logger this
     `(when (>= (lgr-get-threshold ,this) lgr-level-trace)
        (apply #'lgr-log ,this lgr-level-trace ,message (list ,@meta)))))
@@ -475,7 +504,9 @@ class."
 The MESSAGE is a format string and the META is a list of
 arguments to be passed to `format' followed by optional
 key-value pairs (as plist) which is stored in the event
-as metadata."
+as metadata.
+
+THIS is a logger."
   (when (>= (lgr-get-threshold this) level)
     (let* ((num-of-format-controls (lgr--count-format-sequences message))
            (event (lgr-event :msg (apply #'format message (seq-take meta num-of-format-controls))

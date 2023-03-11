@@ -1,9 +1,9 @@
 (package "lgr"
          "0.1.0"
-         "A fully featured logging framework for Emacs")
+         "A fully featured logging framework")
 
 (website-url "https://github.com/Fuco1/emacs-lgr")
-(keywords "logging")
+(keywords "tools")
 
 (package-file "lgr.el")
 

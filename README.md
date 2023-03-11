@@ -265,7 +265,20 @@ are separate from the logging *calls*.
 
 # Using lgr in my own package.
 
+Because all the packages loaded in Emacs share the common namespace,
+there are some basic guidelines for using lgr in your own private or
+published packages:
 
+- The main logger name should correspond to your package name.
+- All the loggers you use in the package should be nested under your main logger.
+- If your package is used inside Emacs, you should provide some
+  reasonable default configuration, for example in the major-mode
+  function or as a separate function `PACKAGE-setup-lgr` that users
+  can call in their init file.
+
+That's it!.  This way, *consumers* of your package can independently
+of you as the author increase or decrease or even completely disable
+logging in your package.
 
 # Acknowledgement
 

@@ -170,7 +170,7 @@ A layout needs to implement the method `lgr-format-event'.")
     ?n (oref event level)
     ?g (oref event logger-name)
     ?m (oref event msg)
-    ?f (oref event meta)
+    ?f (or (oref event meta) "nil")
     ?j (lgr--json-serialize (oref event meta)))))
 
 (defclass lgr-layout-json (lgr-layout) ()

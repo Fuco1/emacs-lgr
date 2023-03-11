@@ -209,7 +209,7 @@ The implementations should always return THIS.")
    (layout
     :type lgr-layout
     :initarg :layout
-    :initform (progn (lgr-layout))
+    :initform (progn (lgr-layout-format :format "[%t] (%L) %g - %m %f"))
     :accessor lgr-get-layout))
   "Appender manages the output of events to proper destinations.
 

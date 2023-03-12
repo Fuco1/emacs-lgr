@@ -293,7 +293,7 @@ THIS is an appender."
 THIS is an appender."
   (let ((msg (lgr-format-event (oref this layout) event)))
     (with-temp-buffer
-      (insert msg)
+      (insert msg "\n")
       (append-to-file (point-min) (point-max) (oref this file))))
   this)
 

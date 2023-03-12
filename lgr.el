@@ -288,7 +288,7 @@ this appender with `lgr-set-layout'.  See `lgr-layout'.")
 
 (cl-defmethod lgr-to-string ((_this lgr-appender))
   "Format THIS appender as string."
-  "message appender")
+  "Message")
 
 (cl-defmethod lgr-set-threshold ((this lgr-appender) level)
   "Set threshold for THIS appender to LEVEL."
@@ -310,6 +310,10 @@ THIS is an appender."
 (defclass lgr-appender-princ (lgr-appender) ()
   "Print events to standard output using `princ'.")
 
+(cl-defmethod lgr-to-string ((_this lgr-appender-princ))
+  "Format THIS appender as string."
+  "Princ")
+
 (cl-defmethod lgr-append ((this lgr-appender-princ) event)
   "Print the EVENT to standard output using `princ'.
 
@@ -325,6 +329,10 @@ THIS is an appender."
     :documentation "Destination file."))
   "Log events to a file.")
 
+(cl-defmethod lgr-to-string ((this lgr-appender-file))
+  "Format THIS appender as string."
+  (format "File %s" (oref this file)))
+
 (cl-defmethod lgr-append ((this lgr-appender-file) event)
   "Print the EVENT to a file.
 
@@ -337,6 +345,10 @@ THIS is an appender."
 
 (defclass lgr-appender-warnings (lgr-appender) ()
   "Append messages using `display-warning'.")
+
+(cl-defmethod lgr-to-string ((_this lgr-appender-warnings))
+  "Format THIS appender as string."
+  "Warnings")
 
 (cl-defmethod lgr-append ((this lgr-appender-warnings) (event lgr-event))
   "Display the EVENT using `display-warning'.
@@ -454,6 +466,118 @@ THIS is a logger."
 (defun lgr-get-all-loggers ()
   "Return a list of all configured loggers."
   (hash-table-values lgr--loggers))
+
+(defun lgr--flat-to-tree (lst &optional depth)
+  "Convert a flat list LST into a tree.
+
+LST is a list of items (depth logger) which are converted to a
+tree structure."
+  (setq depth (or depth 0))
+  (let ((layer nil)
+        (block nil))
+    (while lst
+      (push (pop lst) block)
+      (while (and lst (> (caar lst) depth))
+        (push (pop lst) block))
+      (push (reverse block) layer)
+      (setq block nil))
+    (mapcar (lambda (l)
+              (append
+               (car l)
+               (reverse (lgr--flat-to-tree (cdr l) (1+ depth)))))
+            layer)))
+
+(defun lgr--graphify (tree &optional prefix)
+  "Convert TREE to a graphical tree.
+
+PREFIX is the current string prefix for the processed row.
+
+Return a multi-line string with rendered graph."
+  (setq prefix (or prefix ""))
+  (cond
+   ((consp (car tree))
+    (mapcar (lambda (item) (cons prefix (lgr--graphify item prefix))) tree))
+   ((null tree)
+    (cdr tree))
+   (t (let ((head (seq-take tree 2))
+            (children (nthcdr 2 tree))
+            (index 0))
+        (append
+         head
+         (mapcar
+          (lambda (node)
+            (prog1 (cond
+                    ((= index (1- (length children)))
+                     (cons (concat prefix "└─ ")
+                           (lgr--graphify node (concat prefix "   "))))
+                    (t (cons (concat prefix "├─ ")
+                             (lgr--graphify node (concat prefix "│  ")))))
+              (cl-incf index)))
+          children))))))
+
+(defun lgr--flatten-tree (tree)
+  "Flatten a TREE by appending all leaf nodes to a list."
+  (if (atom tree)
+      (list tree)
+    (apply #'append (mapcar #'lgr--flatten-tree tree))))
+
+(defun lgr--level-to-face (level)
+  (cond
+   ((<= level lgr-level-error) 'error)
+   ((<= level lgr-level-warn) 'warning)
+   (t 'default)))
+
+(defun lgr-loggers-format-to-tree ()
+  "Format all loggers as a tree."
+  (interactive)
+  (let* ((keys (sort (hash-table-keys lgr--loggers) #'string<))
+         (loggers (mapcar
+                   (lambda (key)
+                     (list (if (equal key "lgr--root") 0
+                             (length (split-string key "\\.")))
+                           key))
+                   keys))
+         ;; put the root logger to front
+         (loggers (sort loggers (lambda (a _b) (= (car a) 0)))))
+
+    (with-current-buffer (get-buffer-create "*lgr loggers*")
+      (read-only-mode -1)
+      (erase-buffer)
+      (insert "lgr logger hierarchy\n")
+      (insert "====================\n\n")
+      (insert (propertize "🔇 Loggers without appenders" 'face 'shadow))
+      (insert "\n\n")
+      (insert (mapconcat
+               (lambda (x)
+                 (concat
+                  (car x)
+                  (let* ((logger (gethash (nth 2 x) lgr--loggers))
+                         (name (car (last (split-string (oref logger name) "\\."))))
+                         (level (and (slot-boundp logger 'threshold)
+                                     (oref logger threshold)))
+                         (appenders (oref logger appenders))
+                         (has-appender (lgr-get-appenders logger)))
+                    (format "%s%s%s%s"
+                            (if has-appender "" "🔇 ")
+                            (propertize name
+                                        'font-lock-face (if has-appender 'default 'shadow))
+                            (if level
+                                (propertize (format " [%s]" (lgr-level-to-name level))
+                                            'font-lock-face (lgr--level-to-face level))
+                              "")
+                            (if appenders
+                                (format " > %s" (mapconcat #'lgr-to-string appenders ", "))
+                              ""
+                              )))))
+               (seq-partition
+                (lgr--flatten-tree
+                 (lgr--graphify
+                  (lgr--flat-to-tree loggers)))
+                3)
+               "\n"))
+      (read-only-mode 1)
+      (font-lock-mode 1)
+      (pop-to-buffer (current-buffer)))))
 
 (defun lgr-get-logger (name &optional logger-class)
   "Return a logger with NAME.

@@ -143,6 +143,29 @@ logger and let events bubble up and be processed there.  But if an
 appender is added to some logger lower in the hierarchy, an event can
 be dispatched twice or more times.
 
+Use `M-x lgr-loggers-format-to-tree` to visualize the logger
+hierarchy.  The results are displayed in a `*lgr loggers*` buffer:
+
+```
+lgr logger hierarchy
+====================
+
+🔇 Loggers without appenders
+
+🔇 lgr--root [info]
+├─ elsa [info] > Princ
+│  └─ lsp
+├─ 🔇 lgr
+│  ├─ 🔇 appender
+│  └─ 🔇 layout
+├─ local > Warnings
+│  ├─ error [error]
+│  └─ test
+│     ├─ one
+│     └─ two
+└─ 🔇 test [error]
+```
+
 ## Configuring thresholds
 
 Loggers and appenders can both be configured independently with

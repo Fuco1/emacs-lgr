@@ -410,8 +410,8 @@ The logging macros are:
 (defmacro lgr-fatal (this message &rest meta)
   "Log MESSAGE using THIS logger at fatal level."
   (macroexp-let2 symbolp logger this
-    `(when (>= (lgr-get-threshold ,logger) lgr-level-error)
-       (lgr-log ,logger lgr-level-error ,message ,@meta))))
+    `(when (>= (lgr-get-threshold ,logger) lgr-level-fatal)
+       (lgr-log ,logger lgr-level-fatal ,message ,@meta))))
 
 (defmacro lgr-error (this message &rest meta)
   "Log MESSAGE using THIS logger at error level."

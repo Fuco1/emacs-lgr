@@ -73,4 +73,52 @@
                      (lgr-get-logger "test")
                      (lgr-test-appender :threshold 300))))
         (lgr-log logger 100 "This should be logged")
-        (expect (oref (car (oref logger appenders)) events) :not :to-be nil)))))
+        (expect (oref (car (oref logger appenders)) events) :not :to-be nil))))
+
+  (describe "Test generated logging macros"
+
+    (it "lgr-fatal should emit a fatal level event"
+      (let ((logger (lgr-add-appender
+                     (lgr-get-logger "test")
+                     (lgr-test-appender :threshold lgr-level-trace))))
+        (lgr-fatal logger "This should be logged")
+        (expect (oref (car (oref (car (oref logger appenders)) events)) level) :to-be 100)))
+
+    (it "lgr-error should emit a error level event"
+      (let ((logger (lgr-add-appender
+                     (lgr-get-logger "test")
+                     (lgr-test-appender :threshold lgr-level-trace))))
+        (lgr-error logger "This should be logged")
+        (expect (oref (car (oref (car (oref logger appenders)) events)) level) :to-be 200)))
+
+    (it "lgr-warn should emit a warn level event"
+      (let ((logger (lgr-add-appender
+                     (lgr-get-logger "test")
+                     (lgr-test-appender :threshold lgr-level-trace))))
+        (lgr-warn logger "This should be logged")
+        (expect (oref (car (oref (car (oref logger appenders)) events)) level) :to-be 300)))
+
+    (it "lgr-info should emit a info level event"
+      (let ((logger (lgr-add-appender
+                     (lgr-get-logger "test")
+                     (lgr-test-appender :threshold lgr-level-trace))))
+        (lgr-info logger "This should be logged")
+        (expect (oref (car (oref (car (oref logger appenders)) events)) level) :to-be 400)))
+
+    (it "lgr-debug should emit a debug level event"
+      (let ((logger (lgr-set-threshold
+                     (lgr-add-appender
+                      (lgr-get-logger "test")
+                      (lgr-test-appender :threshold lgr-level-trace))
+                     lgr-level-trace)))
+        (lgr-debug logger "This should be logged")
+        (expect (oref (car (oref (car (oref logger appenders)) events)) level) :to-be 500)))
+
+    (it "lgr-trace should emit a trace level event"
+      (let ((logger (lgr-set-threshold
+                     (lgr-add-appender
+                      (lgr-get-logger "test")
+                      (lgr-test-appender :threshold lgr-level-trace))
+                     lgr-level-trace)))
+        (lgr-trace logger "This should be logged")
+        (expect (oref (car (oref (car (oref logger appenders)) events)) level) :to-be 600)))))

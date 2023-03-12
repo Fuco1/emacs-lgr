@@ -35,6 +35,31 @@
 (require 'eieio)
 (require 'format-spec)
 
+;; (lgr-log :: (function ((class lgr-logger) int string &rest mixed) mixed))
+(cl-defgeneric lgr-log (this level message &rest meta)
+  "Log a MESSAGE at a specific LEVEL.
+
+THIS is a logger instance.
+
+META is the additional custom data stored as metadata on the
+event.  The exact interpretation of this argument depends on the
+logger class.
+
+Rather than using this function directly it is preferable to use
+the logging macros which implement lazy evaluation for the
+arguments.  In case the logger level is less than the granularity
+of the event to be produced, the arguments will not be
+evaluated.
+
+The logging macros are:
+
+- `lgr-fatal'
+- `lgr-error'
+- `lgr-warn'
+- `lgr-info'
+- `lgr-debug'
+- `lgr-trace'.")
+
 (eval-and-compile
   (defconst lgr-log-levels '((fatal . 100)
                              (error . 200)
@@ -45,8 +70,21 @@
     "Log levels used in `lgr-log'.")
 
   (defmacro lgr--def-level (level)
-    `(defconst ,(intern (concat "lgr-level-" (symbol-name level)))
-       ,(cdr (assq level lgr-log-levels))))
+    "Generate the `lgr-level-LEVEL' constant and `lgr-LEVEL' macro for LEVEL."
+    (let ((lgr-level (intern (concat "lgr-level-" (symbol-name level))))
+          (lgr-name (intern (concat "lgr-" (symbol-name level)))))
+      `(progn
+         (defconst ,lgr-level
+           ,(cdr (assq level lgr-log-levels)))
+
+         (defmacro ,lgr-name (this message &rest meta)
+           ,(format "Log MESSAGE using THIS logger at %s level." level)
+           (declare (indent 1))
+           (macroexp-let2 symbolp logger this
+             ,(list
+               'backquote
+               `(when (>= (lgr-get-threshold ,',logger) ,lgr-level)
+                  (lgr-log ,',logger ,lgr-level ,',message ,',@meta))))))))
 
   (lgr--def-level fatal)
   (lgr--def-level error)
@@ -391,80 +429,21 @@ The root logger which is always present has default level info."
             (when (oref this propagate)
               (lgr-get-appenders parent)))))
 
-;; (lgr-log :: (function ((class lgr-logger) int string &rest mixed) mixed))
-(cl-defgeneric lgr-log (this level message &rest meta)
-  "Log a MESSAGE at a specific LEVEL.
+(cl-defmethod lgr-log ((this lgr-logger) level message &rest meta)
+  "Log MESSAGE as-is at LEVEL.
 
-Rather than using this function directly it is preferable to use
-the logging macros which implement lazy evaluation for the
-arguments.  In case the logger level is less than the granularity
-of the event to be produced, the arguments will not be
-evaluated.
+META arguments are stored as event metadata.
 
-THIS is a logger instance.
-
-META is the additional custom data stored as metadata on the
-event.
-
-The logging macros are:
-
-- `lgr-fatal'
-- `lgr-error'
-- `lgr-warn'
-- `lgr-info'
-- `lgr-debug'
-- `lgr-trace'."
+THIS is a logger."
   (when (>= (lgr-get-threshold this) level)
     (let ((event (lgr-event :msg message
                             :level level
                             :timestamp (current-time)
                             :logger-name (oref this name)
                             :meta meta)))
-      (dolist (app (oref this appenders))
-        (when (>= (oref app threshold) (oref event level))
+      (dolist (app (lgr-get-appenders this))
+        (when (>= (lgr-get-threshold app) (oref event level))
           (lgr-append app event))))))
-
-(defmacro lgr-fatal (this message &rest meta)
-  "Log MESSAGE using THIS logger at fatal level."
-  (declare (indent 1))
-  (macroexp-let2 symbolp logger this
-    `(when (>= (lgr-get-threshold ,logger) lgr-level-fatal)
-       (lgr-log ,logger lgr-level-fatal ,message ,@meta))))
-
-(defmacro lgr-error (this message &rest meta)
-  "Log MESSAGE using THIS logger at error level."
-  (declare (indent 1))
-  (macroexp-let2 symbolp logger this
-    `(when (>= (lgr-get-threshold ,logger) lgr-level-error)
-       (lgr-log ,logger lgr-level-error ,message ,@meta))))
-
-(defmacro lgr-warn (this message &rest meta)
-  "Log MESSAGE using THIS logger at warn level."
-  (declare (indent 1))
-  (macroexp-let2 symbolp logger this
-    `(when (>= (lgr-get-threshold ,logger) lgr-level-warn)
-       (lgr-log ,logger lgr-level-warn ,message ,@meta))))
-
-(defmacro lgr-info (this message &rest meta)
-  "Log MESSAGE using THIS logger at info level."
-  (declare (indent 1))
-  (macroexp-let2 symbolp logger this
-    `(when (>= (lgr-get-threshold ,logger) lgr-level-info)
-       (lgr-log ,logger lgr-level-info ,message ,@meta))))
-
-(defmacro lgr-debug (this message &rest meta)
-  "Log MESSAGE using THIS logger at debug level."
-  (declare (indent 1))
-  (macroexp-let2 symbolp logger this
-    `(when (>= (lgr-get-threshold ,logger) lgr-level-debug)
-       (lgr-log ,logger lgr-level-debug ,message ,@meta))))
-
-(defmacro lgr-trace (this message &rest meta)
-  "Log MESSAGE using THIS logger at trace level."
-  (declare (indent 1))
-  (macroexp-let2 symbolp logger this
-    `(when (>= (lgr-get-threshold ,logger) lgr-level-trace)
-       (lgr-log ,logger lgr-level-trace ,message ,@meta))))
 
 (defvar lgr--loggers (let ((ht (make-hash-table :test #'equal)))
                        (puthash "lgr--root" (lgr-logger :name "lgr--root" :threshold 400) ht)
@@ -522,18 +501,20 @@ class."
           (cl-incf count)))
       count)))
 
-(cl-defmethod lgr-log ((this lgr-logger-format) level message &rest meta)
-  "Log a MESSAGE at a specific LEVEL using a format string.
+(cl-defmethod lgr-log ((this lgr-logger-format) level fmt &rest meta)
+  "Format FMT using `format' drawing values from META.
 
-The MESSAGE is a format string and the META is a list of
-arguments to be passed to `format' followed by optional
-key-value pairs (as plist) which is stored in the event
-as metadata.
+LEVEL is the log level, see `lgr-log-levels'.
+
+FMT is a `format' compatible format string.
+
+The placeholders in FMT are replaced by arguments from META.  Any
+leftover arguments are stored on the event as metadata.
 
 THIS is a logger."
   (when (>= (lgr-get-threshold this) level)
-    (let* ((num-of-format-controls (lgr--count-format-sequences message))
-           (event (lgr-event :msg (apply #'format message (seq-take meta num-of-format-controls))
+    (let* ((num-of-format-controls (lgr--count-format-sequences fmt))
+           (event (lgr-event :msg (apply #'format fmt (seq-take meta num-of-format-controls))
                              :level level
                              :timestamp (current-time)
                              :logger-name (oref this name)

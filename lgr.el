@@ -435,36 +435,36 @@ The logging macros are:
   "Log MESSAGE using THIS logger at error level."
   (declare (indent 1))
   (macroexp-let2 symbolp logger this
-    `(when (>= (lgr-get-threshold ,this) lgr-level-error)
-       (lgr-log ,this lgr-level-error ,message ,@meta))))
+    `(when (>= (lgr-get-threshold ,logger) lgr-level-error)
+       (lgr-log ,logger lgr-level-error ,message ,@meta))))
 
 (defmacro lgr-warn (this message &rest meta)
   "Log MESSAGE using THIS logger at warn level."
   (declare (indent 1))
   (macroexp-let2 symbolp logger this
-    `(when (>= (lgr-get-threshold ,this) lgr-level-warn)
-       (lgr-log ,this lgr-level-warn ,message ,@meta))))
+    `(when (>= (lgr-get-threshold ,logger) lgr-level-warn)
+       (lgr-log ,logger lgr-level-warn ,message ,@meta))))
 
 (defmacro lgr-info (this message &rest meta)
   "Log MESSAGE using THIS logger at info level."
   (declare (indent 1))
   (macroexp-let2 symbolp logger this
-    `(when (>= (lgr-get-threshold ,this) lgr-level-info)
-       (lgr-log ,this lgr-level-info ,message ,@meta))))
+    `(when (>= (lgr-get-threshold ,logger) lgr-level-info)
+       (lgr-log ,logger lgr-level-info ,message ,@meta))))
 
 (defmacro lgr-debug (this message &rest meta)
   "Log MESSAGE using THIS logger at debug level."
   (declare (indent 1))
   (macroexp-let2 symbolp logger this
-    `(when (>= (lgr-get-threshold ,this) lgr-level-debug)
-       (lgr-log ,this lgr-level-debug ,message ,@meta))))
+    `(when (>= (lgr-get-threshold ,logger) lgr-level-debug)
+       (lgr-log ,logger lgr-level-debug ,message ,@meta))))
 
 (defmacro lgr-trace (this message &rest meta)
   "Log MESSAGE using THIS logger at trace level."
   (declare (indent 1))
   (macroexp-let2 symbolp logger this
-    `(when (>= (lgr-get-threshold ,this) lgr-level-trace)
-       (lgr-log ,this lgr-level-trace ,message ,@meta))))
+    `(when (>= (lgr-get-threshold ,logger) lgr-level-trace)
+       (lgr-log ,logger lgr-level-trace ,message ,@meta))))
 
 (defvar lgr--loggers (let ((ht (make-hash-table :test #'equal)))
                        (puthash "lgr--root" (lgr-logger :name "lgr--root" :threshold 400) ht)

@@ -297,6 +297,23 @@ THIS is an appender."
       (append-to-file (point-min) (point-max) (oref this file))))
   this)
 
+(defclass lgr-appender-warnings (lgr-appender) ()
+  "Append messages using `display-warning'.")
+
+(cl-defmethod lgr-append ((this lgr-appender-warnings) (event lgr-event))
+  "Display the EVENT using `display-warning'.
+
+THIS is an appender."
+  (display-warning
+   (mapcar #'intern (split-string (oref event logger-name) "\\."))
+   (lgr-format-event (oref this layout) event)
+   (let ((level (oref event level)))
+     (cond
+      ((<= level lgr-level-fatal) :emergency)
+      ((<= level lgr-level-error) :error)
+      ((<= level lgr-level-warn) :warning)
+      (t :debug)))))
+
 (defclass lgr-logger ()
   ((name
     :type string

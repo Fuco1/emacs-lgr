@@ -314,7 +314,7 @@ THIS is an appender."
   "Format THIS appender as string."
   "Princ")
 
-(cl-defmethod lgr-append ((this lgr-appender-princ) event)
+(cl-defmethod lgr-append ((this lgr-appender-princ) (event lgr-event))
   "Print the EVENT to standard output using `princ'.
 
 THIS is an appender."
@@ -333,7 +333,7 @@ THIS is an appender."
   "Format THIS appender as string."
   (format "File %s" (oref this file)))
 
-(cl-defmethod lgr-append ((this lgr-appender-file) event)
+(cl-defmethod lgr-append ((this lgr-appender-file) (event lgr-event))
   "Print the EVENT to a file.
 
 THIS is an appender."

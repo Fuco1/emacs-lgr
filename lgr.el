@@ -352,7 +352,7 @@ THIS is an appender."
 
 (cl-defmethod lgr-to-string ((this lgr-appender-buffer))
   "Format THIS appender as string."
-  (format "Buffer %s" (buffer-name (oref this buffer))))
+  (format "%S" (get-buffer-create (oref this buffer))))
 
 (cl-defmethod lgr-append ((this lgr-appender-buffer) (event lgr-event))
   "Print the EVENT to a buffer.

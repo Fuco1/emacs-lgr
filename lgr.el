@@ -366,6 +366,74 @@ THIS is an appender."
       (read-only-mode 1)))
   this)
 
+(defclass lgr-appender-journald (lgr-appender)
+  ((proc
+    :type (or process null)
+    :initform nil))
+  "Log events to systemd journal.
+
+This appender maps the lgr log levels to journald levels in the
+following way:
+
+- fatal -> 2 - Critical
+- error -> 3 - Error
+- warn  -> 4 - Warning
+- info  -> 6 - Informational
+- debug -> 7 - Debug
+- trace -> 7 - Debug")
+
+(cl-defmethod lgr-to-string ((_this lgr-appender-journald))
+  "Format THIS appender as string."
+  "Journald")
+
+(cl-defmethod lgr-append ((this lgr-appender-journald) (event lgr-event))
+  "Log EVENT to journald.
+
+If EVENT's meta contains any of the following, they will be added
+to the datagram.
+
+- :SYSLOG_IDENTIFIER (defaults to \"emacs-lgr\")
+- :CODE_FILE
+- :CODE_LINE
+- :CODE_FUNC
+
+Documentation for user journal fields are available at
+https://www.freedesktop.org/software/systemd/man/systemd.journal-fields.html"
+  (unless (oref this proc)
+    (let ((name (generate-new-buffer-name "*lgr-appender-journald*")))
+      (oset this proc
+            (make-network-process :name name
+                                  :buffer (get-buffer-create name)
+                                  :type 'datagram
+                                  :family 'local
+                                  :remote "/run/systemd/journal/socket"))))
+  (let* ((level (oref event level))
+         (priority (cond
+                    ((<= level lgr-level-fatal) 2)
+                    ((<= level lgr-level-error) 3)
+                    ((<= level lgr-level-warn) 4)
+                    ((<= level lgr-level-info) 6)
+                    (t 7))))
+    (process-send-string
+     (oref this proc)
+     (format "PRIORITY=%d
+SYSLOG_IDENTIFIER=%s%s%s%s
+MESSAGE=%s
+"
+             priority
+             (or (plist-get (oref event meta) :SYSLOG_IDENTIFIER)
+                 "emacs-lgr")
+             (if-let ((cf (plist-get (oref event meta) :CODE_FILE)))
+                 (format "CODE_FILE=%s\n" cf)
+               "")
+             (if-let ((cl (plist-get (oref event meta) :CODE_LINE)))
+                 (format "CODE_LINE=%s\n" cl)
+               "")
+             (if-let ((cf (plist-get (oref event meta) :CODE_FUNC)))
+                 (format "CODE_FUNC=%s\n" cf)
+               "")
+             (lgr-format-event (oref this layout) event)))))
+
 (defclass lgr-appender-warnings (lgr-appender) ()
   "Append messages using `display-warning'.
 

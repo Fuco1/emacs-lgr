@@ -343,6 +343,29 @@ THIS is an appender."
       (append-to-file (point-min) (point-max) (oref this file))))
   this)
 
+(defclass lgr-appender-buffer (lgr-appender)
+  ((buffer
+    :type (or string buffer)
+    :initarg :buffer
+    :documentation "Destination buffer."))
+  "Log events to a buffer.")
+
+(cl-defmethod lgr-to-string ((this lgr-appender-buffer))
+  "Format THIS appender as string."
+  (format "Buffer %s" (buffer-name (oref this buffer))))
+
+(cl-defmethod lgr-append ((this lgr-appender-buffer) (event lgr-event))
+  "Print the EVENT to a buffer.
+
+THIS is an appender."
+  (let ((msg (lgr-format-event (oref this layout) event)))
+    (with-current-buffer (get-buffer-create (oref this buffer))
+      (read-only-mode -1)
+      (goto-char (point-max))
+      (insert msg "\n")
+      (read-only-mode 1)))
+  this)
+
 (defclass lgr-appender-warnings (lgr-appender) ()
   "Append messages using `display-warning'.
 

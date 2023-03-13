@@ -22,4 +22,26 @@
                                                 :logger-name ""
                                                 :timestamp (current-time)
                                                 :level 400))
-                :to-equal appender)))))
+                :to-equal appender))))
+
+  (describe "lgr-appender-buffer"
+
+    (it "should log to a buffer if given a string buffer name"
+      (let ((appender (lgr-appender-buffer :buffer "test-buffer")))
+        (lgr-append appender (lgr-event :msg "test message"
+                                        :logger-name ""
+                                        :timestamp (current-time)
+                                        :level 400))
+        (expect (with-current-buffer (get-buffer "test-buffer")
+                  (buffer-string))
+                :to-match "test message")))
+
+    (it "should log to a buffer if given a buffer object"
+      (let ((appender (lgr-appender-buffer :buffer (get-buffer-create "test-buffer"))))
+        (lgr-append appender (lgr-event :msg "test message"
+                                        :logger-name ""
+                                        :timestamp (current-time)
+                                        :level 400))
+        (expect (with-current-buffer (get-buffer "test-buffer")
+                  (buffer-string))
+                :to-match "test message")))))

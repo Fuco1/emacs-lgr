@@ -344,7 +344,17 @@ THIS is an appender."
   this)
 
 (defclass lgr-appender-warnings (lgr-appender) ()
-  "Append messages using `display-warning'.")
+  "Append messages using `display-warning'.
+
+This appender maps the lgr log levels to warning log levels in
+the following way:
+
+- fatal -> :emergency
+- error -> :error
+- warn  -> :warning
+- info  -> :debug
+- debug -> :debug
+- trace -> :debug")
 
 (cl-defmethod lgr-to-string ((_this lgr-appender-warnings))
   "Format THIS appender as string."

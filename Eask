@@ -18,4 +18,5 @@
 
 (development
  (depends-on "buttercup")
- (depends-on "elsa"))
+ (when (version<= "26.3" emacs-version)
+   (depends-on "elsa")))

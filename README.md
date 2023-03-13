@@ -222,6 +222,34 @@ Various layouts handle the formatting of metadata differently, you can
 read in their documentation.  For example, JSON layout will serialize
 it as JSON subobject under a `meta` key.
 
+# Available Loggers, Appenders and Layouts
+
+lgr comes with many appenders and layouts out of the box.  You can
+read the built-in documentation with `C-h f <class-name>`.
+
+Currently implemented loggers:
+
+- `lgr-logger` - log message as-is
+- `lgr-logger-format` - interpret message as format string for
+  `format`, using remaining arguments as replacement.
+
+The `lgr-logger-format` is the default format returned by
+`lgr-get-logger`.
+
+Currently implemented appenders:
+
+- `lgr-appender` - print events using `message`
+- `lgr-appender-princ` - print events using `princ` (standard output in `-batch`)
+- `lgr-appender-file` - write events to a file
+- `lgr-appender-buffer` - write events to a buffer
+- `lgr-appender-warnings` - use `display-warning` to log events
+- `lgr-appender-journald` - write logs to systemd journal
+
+Available layouts:
+
+- `lgr-layout-format` - use custom format string template to format events
+- `lgr-layout-json` - format as JSON string
+
 # But isn't it going to slow down my code?
 
 No.  `lgr` uses macros to implement lazy evaluation of the arguments.

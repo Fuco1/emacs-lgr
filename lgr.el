@@ -33,6 +33,7 @@
 
 (require 'seq)
 (require 'eieio)
+(eval-and-compile (setq eieio-backward-compatibility nil))
 (require 'format-spec)
 
 ;; (lgr-log :: (function ((class lgr-logger) int string &rest mixed) mixed))

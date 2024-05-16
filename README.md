@@ -97,14 +97,14 @@ package, but can be equally done without.
 ``` emacs-lisp
 (-> lgr
     (lgr-add-appender
-     (-> (lgr-appender-file "json-logs.log")
+     (-> (lgr-appender-file :file "json-logs.log")
          (lgr-set-layout (lgr-layout-json)))))
 
 ;; same code macro-expanded
 (lgr-add-appender
  lgr
  (lgr-set-layout
-  (lgr-appender-file "json-logs.log")
+  (lgr-appender-file :file "json-logs.log")
   (lgr-layout-json)))
 ```
 

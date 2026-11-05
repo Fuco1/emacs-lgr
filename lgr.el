@@ -36,6 +36,11 @@
 (eval-and-compile (setq eieio-backward-compatibility nil))
 (require 'format-spec)
 
+(defun lgr-current-time ()
+  "Like `current-time' but with `current-time-list' always `t'."
+  (let ((current-time-list t))
+    (current-time)))
+
 ;; (lgr-log :: (function ((class lgr-logger) int string &rest mixed) mixed))
 (cl-defgeneric lgr-log (this level message &rest meta)
   "Log a MESSAGE at a specific LEVEL.
@@ -127,7 +132,7 @@ The logging macros are:
    (timestamp
     :type (list-of integer)
     :initarg :timestamp
-    :documentation "Timestamp created by `current-time'.")
+    :documentation "Timestamp created by `lgr-current-time'.")
    (timezone
     :type (or string boolean symbol)
     :initarg :timezone
@@ -552,7 +557,7 @@ THIS is a logger."
   (when (>= (lgr-get-threshold this) level)
     (let ((event (lgr-event :msg message
                             :level level
-                            :timestamp (current-time)
+                            :timestamp (lgr-current-time)
                             :logger-name (oref this name)
                             :meta meta)))
       (dolist (app (lgr-get-appenders this))
@@ -742,7 +747,7 @@ THIS is a logger."
     (let* ((num-of-format-controls (lgr--count-format-sequences fmt))
            (event (lgr-event :msg (apply #'format fmt (seq-take meta num-of-format-controls))
                              :level level
-                             :timestamp (current-time)
+                             :timestamp (lgr-current-time)
                              :logger-name (oref this name)
                              :meta (seq-drop meta num-of-format-controls))))
       (dolist (app (lgr-get-appenders this))

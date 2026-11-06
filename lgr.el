@@ -115,6 +115,10 @@ The logging macros are:
   "Format OBJ as string."
   (format "%s" obj))
 
+(defun lgr-timestamp-p (object)
+  "Return non-nil if OBJECT is a Lisp timestamp."
+  (floatp (ignore-errors (float-time object))))
+
 (defclass lgr-event ()
   ((msg
     :type string
@@ -125,7 +129,7 @@ The logging macros are:
     :initarg :level
     :documentation "Log level.  See `lgr-log-levels'")
    (timestamp
-    :type (list-of integer)
+    :type (satisfies lgr-timestamp-p)
     :initarg :timestamp
     :documentation "Timestamp created by `current-time'.")
    (timezone

@@ -36,11 +36,6 @@
 (eval-and-compile (setq eieio-backward-compatibility nil))
 (require 'format-spec)
 
-(defun lgr-current-time ()
-  "Like `current-time' but with `current-time-list' always `t'."
-  (let ((current-time-list t))
-    (current-time)))
-
 ;; (lgr-log :: (function ((class lgr-logger) int string &rest mixed) mixed))
 (cl-defgeneric lgr-log (this level message &rest meta)
   "Log a MESSAGE at a specific LEVEL.
@@ -120,6 +115,10 @@ The logging macros are:
   "Format OBJ as string."
   (format "%s" obj))
 
+(defun lgr-timestamp-p (object)
+  "Return non-nil if OBJECT is a Lisp timestamp."
+  (floatp (ignore-errors (float-time object))))
+
 (defclass lgr-event ()
   ((msg
     :type string
@@ -130,9 +129,9 @@ The logging macros are:
     :initarg :level
     :documentation "Log level.  See `lgr-log-levels'")
    (timestamp
-    :type (list-of integer)
+    :type (satisfies lgr-timestamp-p)
     :initarg :timestamp
-    :documentation "Timestamp created by `lgr-current-time'.")
+    :documentation "Timestamp created by `current-time'.")
    (timezone
     :type (or string boolean symbol)
     :initarg :timezone
@@ -557,7 +556,7 @@ THIS is a logger."
   (when (>= (lgr-get-threshold this) level)
     (let ((event (lgr-event :msg message
                             :level level
-                            :timestamp (lgr-current-time)
+                            :timestamp (current-time)
                             :logger-name (oref this name)
                             :meta meta)))
       (dolist (app (lgr-get-appenders this))
@@ -747,7 +746,7 @@ THIS is a logger."
     (let* ((num-of-format-controls (lgr--count-format-sequences fmt))
            (event (lgr-event :msg (apply #'format fmt (seq-take meta num-of-format-controls))
                              :level level
-                             :timestamp (lgr-current-time)
+                             :timestamp (current-time)
                              :logger-name (oref this name)
                              :meta (seq-drop meta num-of-format-controls))))
       (dolist (app (lgr-get-appenders this))
